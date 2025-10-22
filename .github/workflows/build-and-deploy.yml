@@ -27,11 +27,16 @@ jobs:
         run: |
           cd api
           composer install --no-dev --optimize-autoloader
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
 
       - name: Build Angular (Admin + Site)
         run: |
-          cd admin && npm ci && npm run build
-          cd ../site && npm ci && npm run build
+          cd admin && npm install && npm run build
+          cd ../site && npm install && npm run build
+        env:
+          CI: false
 
       - name: Build Docker image
         run: |
