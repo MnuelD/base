@@ -1,26 +1,25 @@
 version: '3.9'
 
 services:
+  # ==========================
+  # Backend Laravel (PHP-FPM)
+  # ==========================
   php:
     build:
-      context: .
-      dockerfile: docker/php/Dockerfile
+      context: ./api
+      dockerfile: Dockerfile
     container_name: laravel_api
+    working_dir: /var/www/html
     volumes:
-      - ./api:/var/www
-    ports:
-      - "9000:9000"
+      - ./api:/var/www/html
+    expose:
+      - "9000"
     networks:
       - laravel_net
 
-  node:
-    build:
-      context: .
-      dockerfile: docker/node/Dockerfile
-    container_name: angular_build
-    networks:
-      - laravel_net
-
+  # ==========================
+  # Nginx com builds Angular
+  # ==========================
   nginx:
     build:
       context: .
@@ -28,7 +27,6 @@ services:
     container_name: nginx_web
     depends_on:
       - php
-      - node
     ports:
       - "8080:80"
     networks:
