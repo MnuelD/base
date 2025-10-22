@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: laravel_api
+    volumes:
+      - ./api:/var/www
+    ports:
+      - "9000:9000"
+    networks:
+      - laravel_net
+
+  node:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile
+    container_name: angular_build
+    networks:
+      - laravel_net
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    container_name: nginx_web
+    depends_on:
+      - php
+      - node
+    ports:
+      - "8080:80"
+    networks:
+      - laravel_net
+
+networks:
+  laravel_net:
+    driver: bridge

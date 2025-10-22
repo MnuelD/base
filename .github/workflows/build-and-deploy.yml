@@ -1,0 +1,55 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Build Laravel
+        run: |
+          cd api
+          composer install --no-dev --optimize-autoloader
+
+      - name: Build Angular (Admin + Site)
+        run: |
+          cd admin && npm ci && npm run build
+          cd ../site && npm ci && npm run build
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.AZURE_REGISTRY_URL }}/laravel-angular:latest .
+
+      - name: Log in to Azure Container Registry
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.AZURE_REGISTRY_URL }}
+          username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+      - name: Push image to ACR
+        run: |
+          docker push ${{ secrets.AZURE_REGISTRY_URL }}/laravel-angular:latest
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          images: ${{ secrets.AZURE_REGISTRY_URL }}/laravel-angular:latest
