@@ -10,9 +10,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout do código
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Cache para Composer e Node (acelera builds)
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache
+            vendor
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-
+
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            admin/node_modules
+            site/node_modules
+          key: node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            node-
+
+      # 3️⃣ Instala Node.js e PHP
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -22,26 +46,37 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          extensions: mbstring, pdo_mysql, tokenizer, xml, ctype, json, bcmath, fileinfo
 
+      # 4️⃣ Build Laravel
       - name: Build Laravel
         run: |
           cd api
           composer install --no-dev --optimize-autoloader
+          cp .env.example .env || true
+          php artisan key:generate || true
           php artisan config:cache
           php artisan route:cache
           php artisan view:cache
 
+      # 5️⃣ Build Angular (Admin + Site)
       - name: Build Angular (Admin + Site)
         run: |
-          cd admin && npm install && npm run build
-          cd ../site && npm install && npm run build
+          cd admin
+          npm install
+          npm run build
+          cd ../site
+          npm install
+          npm run build
         env:
           CI: false
 
+      # 6️⃣ Build da imagem Docker
       - name: Build Docker image
         run: |
           docker build -t ${{ secrets.AZURE_REGISTRY_URL }}/laravel-angular:latest .
 
+      # 7️⃣ Login no Azure Container Registry
       - name: Log in to Azure Container Registry
         uses: azure/docker-login@v2
         with:
@@ -49,10 +84,12 @@ jobs:
           username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
           password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
 
+      # 8️⃣ Push da imagem Docker
       - name: Push image to ACR
         run: |
           docker push ${{ secrets.AZURE_REGISTRY_URL }}/laravel-angular:latest
 
+      # 9️⃣ Deploy na Azure Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
