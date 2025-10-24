@@ -3,7 +3,7 @@ FROM php:8.3-fpm
 WORKDIR /var/www
 
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libjpeg-dev libfreetype6-dev oniguruma-dev \
+    git curl zip unzip libpng-dev libjpeg-dev libfreetype6-dev libonig-dev \
     && docker-php-ext-install pdo_mysql mbstring gd
 
 COPY ./api /var/www
