@@ -1,37 +1,47 @@
-version: '3.9'
+version: "3.9"
 
 services:
-  # ==========================
-  # Backend Laravel (PHP-FPM)
-  # ==========================
-  php:
+  app:
     build:
       context: .
-      dockerfile: docker/php/Dockerfile
-    container_name: laravel_api
-    working_dir: /var/www/html
-    volumes:
-      - ./api:/var/www/html
-    expose:
-      - "9000"
-    networks:
-      - laravel_net
-
-  # ==========================
-  # Nginx com builds Angular
-  # ==========================
-  nginx:
-    build:
-      context: .
-      dockerfile: docker/nginx/Dockerfile
-    container_name: nginx_web
-    depends_on:
-      - php
+      dockerfile: Dockerfile
+    container_name: base_app
     ports:
       - "8080:80"
+    volumes:
+      - ./api:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: true
+      APP_KEY: base64:CHAVE_DO_APP
+      DB_HOST: db
+      DB_DATABASE: base_db
+      DB_USERNAME: base_user
+      DB_PASSWORD: base_pass
+    depends_on:
+      - db
     networks:
-      - laravel_net
+      - base_net
+
+  db:
+    image: mysql:8
+    container_name: base_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: base_db
+      MYSQL_USER: base_user
+      MYSQL_PASSWORD: base_pass
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - base_net
 
 networks:
-  laravel_net:
+  base_net:
     driver: bridge
+
+volumes:
+  db_data:
